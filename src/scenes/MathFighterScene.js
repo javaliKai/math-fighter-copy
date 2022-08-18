@@ -13,6 +13,36 @@ export default class MathFighterScene extends Phaser.Scene {
     this.player = undefined;
     this.enemy = undefined;
     this.slash = undefined;
+
+    // Game states
+    this.startGame = false;
+    this.questionText = undefined;
+    this.resultText = undefined;
+
+    // Game buttons
+    this.button1 = undefined;
+    this.button2 = undefined;
+    this.button3 = undefined;
+    this.button4 = undefined;
+    this.button5 = undefined;
+    this.button6 = undefined;
+    this.button7 = undefined;
+    this.button8 = undefined;
+    this.button9 = undefined;
+    this.button0 = undefined;
+    this.buttonDel = undefined;
+    this.buttonOk = undefined;
+
+    // Number inputs
+    this.numberArray = [];
+    this.number = undefined;
+
+    // Result text
+    this.resultText = undefined;
+
+    // Question
+    this.question = [];
+    this.questionText = undefined;
   }
   preload() {
     this.load.image('background', 'images/bg_layer1.png');
@@ -34,6 +64,7 @@ export default class MathFighterScene extends Phaser.Scene {
       frameWidth: 42,
       frameHeight: 88,
     });
+    this.load.image('start-btn', 'images/start_button.png');
   }
   create() {
     // Setting up background scene
@@ -77,6 +108,25 @@ export default class MathFighterScene extends Phaser.Scene {
       .setOffset(0, -10)
       .setDepth(1)
       .setCollideWorldBounds(true);
+
+    // Call createAnimation() method
+    this.createAnimation();
+
+    // Adding start button
+    let start_button = this.add
+      .image(this.gameHalfWidth, this.gameHalfHeight + 181, 'start-btn')
+      .setInteractive();
+
+    // Adding event handler to start_button
+    start_button.on(
+      'pointerdown',
+      () => {
+        this.gameStart();
+        // Remove start button once it's clicked
+        start_button.destroy();
+      },
+      this
+    );
   }
   update() {}
 
@@ -120,5 +170,211 @@ export default class MathFighterScene extends Phaser.Scene {
     });
 
     // Lanjutin untuk buat animasi enemy sendiri yha (hal 156)😀
+    // Enemy animation
+    this.anims.create({
+      key: 'enemy-standby',
+      frames: this.anims.generateFrameNumbers('enemy', {
+        start: 15,
+        end: 19,
+      }),
+      frameRate: 10,
+      repeat: -1,
+    });
+
+    this.anims.create({
+      key: 'enemy-attack',
+      frames: this.anims.generateFrameNumbers('enemy', {
+        start: 10,
+        end: 14,
+      }),
+      frameRate: 10,
+    });
+
+    this.anims.create({
+      key: 'enemy-hit',
+      frames: this.anims.generateFrameNumbers('enemy', {
+        start: 5,
+        end: 9,
+      }),
+      frameRate: 10,
+    });
+
+    this.anims.create({
+      key: 'enemy-die',
+      frames: this.anims.generateFrameNumbers('enemy', {
+        start: 0,
+        end: 4,
+      }),
+      frameRate: 10,
+    });
+  }
+
+  gameStart() {
+    // Set startGame state to true
+    this.startGame = true;
+
+    // Run player & enemy standby animation
+    this.player.anims.play('player-standby', true);
+    this.enemy.anims.play('enemy-standby', true);
+
+    // Add the result & question display
+    this.resultText = this.add.text(this.gameHalfWidth, 200, '0', {
+      fontSize: '32px',
+      // @ts-ignore
+      fill: '#000',
+    });
+
+    this.questionText = this.add.text(this.gameHalfWidth, 100, '0', {
+      fontSize: '32px',
+      // @ts-ignore
+      fill: '#000',
+    });
+
+    // Create buttons
+    this.createButtons();
+  }
+
+  createButtons() {
+    const startPosY = this.scale.height - 246;
+    const widthDiff = 131; // margin-left and right
+    const heightDiff = 71.25; // margin-top
+
+    // Center buttons
+    this.button2 = this.add
+      .image(this.gameHalfWidth, startPosY, 'numbers', 1)
+      .setInteractive()
+      .setData('value', 2);
+
+    this.button5 = this.add
+      .image(this.gameHalfWidth, this.button2.y + heightDiff, 'numbers', 4)
+      .setInteractive()
+      .setData('value', 5);
+
+    this.button8 = this.add
+      .image(this.gameHalfWidth, this.button5.y + heightDiff, 'numbers', 7)
+      .setInteractive()
+      .setData('value', 8);
+
+    this.button0 = this.add
+      .image(this.gameHalfWidth, this.button8.y + heightDiff, 'numbers', 10)
+      .setInteractive()
+      .setData('value', 0);
+
+    // Left buttons
+    this.button1 = this.add
+      .image(this.button2.x - widthDiff, startPosY, 'numbers', 0)
+      .setInteractive()
+      .setData('value', 1);
+
+    this.button4 = this.add
+      .image(
+        this.button5.x - widthDiff,
+        this.button1.y + heightDiff,
+        'numbers',
+        3
+      )
+      .setInteractive()
+      .setData('value', 4);
+
+    this.button7 = this.add
+      .image(
+        this.button8.x - widthDiff,
+        this.button4.y + heightDiff,
+        'numbers',
+        6
+      )
+      .setInteractive()
+      .setData('value', 7);
+
+    this.buttonDel = this.add
+      .image(
+        this.button0.x - widthDiff,
+        this.button7.y + heightDiff,
+        'numbers',
+        9
+      )
+      .setInteractive()
+      .setData('value', 'del');
+
+    // Right buttons
+    this.button3 = this.add
+      .image(this.button2.x + widthDiff, startPosY, 'numbers', 2)
+      .setInteractive()
+      .setData('value', 3);
+
+    this.button6 = this.add
+      .image(
+        this.button5.x + widthDiff,
+        this.button3.y + heightDiff,
+        'numbers',
+        5
+      )
+      .setInteractive()
+      .setData('value', 6);
+
+    this.button9 = this.add
+      .image(
+        this.button8.x + widthDiff,
+        this.button6.y + heightDiff,
+        'numbers',
+        8
+      )
+      .setInteractive()
+      .setData('value', 9);
+
+    this.buttonOk = this.add
+      .image(
+        this.button0.x + widthDiff,
+        this.button9.y + heightDiff,
+        'numbers',
+        11
+      )
+      .setInteractive()
+      .setData('value', 'ok');
+  }
+
+  addNumber(pointer, object, event) {
+    let value = object.getData('value');
+
+    // When 'DEL' and 'OK' button is pressed
+    if (isNaN(value)) {
+      if (value == 'del') {
+        this.numberArray.pop();
+        if (this.numberArray.length < 1) {
+          // Insert 0 when the numberArray is empty after deletion
+          this.numberArray[0] = 0;
+        }
+      }
+
+      if (value == 'ok') {
+        this.checkAnswer();
+        this.numberArray = [];
+        this.numberArray[0] = 0; // reset input
+      }
+    }
+    // When number button is pressed
+    else {
+      if (this.numberArray.length == 1 && this.numberArray[0] == 0) {
+        this.numberArray[0] = value;
+      } else {
+        if (this.numberArray.length < 10) {
+          this.numberArray.push(value);
+        }
+      }
+    }
+
+    // Join the whole number array as a string
+    this.number = parseInt(this.numberArray.join(''));
+
+    // Display the number as text
+    // @ts-ignore
+    this.resultText.setText(this.number);
+    const textHalfWidth = this.resultText.width * 0.6;
+    this.resultText.setX(this.gameHalfWidth - textHalfWidth);
+    event.stopPropagation(); // propagation = bubbling up to parent elements or capturing down to child elements
+  }
+
+  checkAnswer() {
+    // diisi nanti di meeting 16
   }
 }
