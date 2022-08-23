@@ -43,6 +43,13 @@ export default class MathFighterScene extends Phaser.Scene {
     // Question
     this.question = [];
     this.questionText = undefined;
+
+    // Answer
+    this.correctAnswer = undefined;
+
+    // Animation for sprites
+    this.playerAttack = false;
+    this.enemyAttack = false;
   }
   preload() {
     this.load.image('background', 'images/bg_layer1.png');
@@ -127,8 +134,50 @@ export default class MathFighterScene extends Phaser.Scene {
       },
       this
     );
+
+    // When enemy's slash hits player
+    this.physics.add.overlap(
+      this.slash,
+      this.player,
+      this.spriteHit,
+      null,
+      this
+    );
+
+    // When player's slash hits enemy
+    this.physics.add.overlap(
+      this.slash,
+      this.enemy,
+      this.spriteHit,
+      null,
+      this
+    );
   }
-  update() {}
+  update(time) {
+    // Animation when the answer is true (player attacks enemy)
+    if (this.correctAnswer === true && !this.playerAttack) {
+      this.player.anims.play('player-attack', true);
+      this.time.delayedCall(500, () => {
+        this.createSlash(this.player.x + 60, this.player.y, 4, 600);
+      });
+      this.playerAttack = true;
+    }
+
+    // Animation when idle
+    if (this.correctAnswer === undefined) {
+      this.player.anims.play('player-standby', true);
+      this.enemy.anims.play('enemy-standby', true);
+    }
+
+    // Animation when the answer is wrong (enemy attacks player)
+    if (this.correctAnswer === false && !this.enemyAttack) {
+      this.enemy.anims.play('enemy-attack', true);
+      this.time.delayedCall(500, () => {
+        this.createSlash(this.enemy.x - 60, this.enemy.y, 2, -600, true);
+      });
+      this.enemyAttack = true;
+    }
+  }
 
   createAnimation() {
     // Player animation
@@ -232,6 +281,12 @@ export default class MathFighterScene extends Phaser.Scene {
 
     // Create buttons
     this.createButtons();
+
+    // Event listener for displaying number input
+    this.input.on('gameobjectdown', this.addNumber, this);
+
+    // Generate the question
+    this.generateQuestion();
   }
 
   createButtons() {
@@ -374,7 +429,89 @@ export default class MathFighterScene extends Phaser.Scene {
     event.stopPropagation(); // propagation = bubbling up to parent elements or capturing down to child elements
   }
 
+  getOperator() {
+    const operator = ['+', '-', 'x', ':'];
+    return operator[Phaser.Math.Between(0, 3)];
+  }
+
+  generateQuestion() {
+    // Generate random numbers
+    let numberA = Phaser.Math.Between(0, 50);
+    let numberB = Phaser.Math.Between(0, 50);
+
+    // Generate a random operator
+    let operator = this.getOperator();
+
+    // Question display
+    if (operator === '+') {
+      this.question[0] = `${numberA} + ${numberB}`; // the question
+      this.question[1] = numberA + numberB; // the answer
+    }
+    if (operator === 'x') {
+      this.question[0] = `${numberA} x ${numberB}`;
+      this.question[1] = numberA * numberB;
+    }
+    if (operator === '-') {
+      if (numberB > numberA) {
+        this.question[0] = `${numberB} - ${numberA}`;
+        this.question[1] = numberB - numberA;
+      } else {
+        this.question[0] = `${numberA} - ${numberB}`;
+        this.question[1] = numberA - numberB;
+      }
+    }
+    if (operator === ':') {
+      // In case that the question is divided by 0, generate new numbers
+      do {
+        numberA = Phaser.Math.Between(0, 50);
+        numberB = Phaser.Math.Between(0, 50);
+      } while (!Number.isInteger(numberA / numberB));
+      this.question[0] = `${numberA} : ${numberB}`;
+      this.question[1] = numberA / numberB;
+    }
+
+    this.questionText.setText(this.question[0]);
+    const textHalfWidth = this.questionText.width * 0.5;
+    this.questionText.setX(this.gameHalfWidth - textHalfWidth);
+  }
+
   checkAnswer() {
-    // diisi nanti di meeting 16
+    if (this.number == this.question[1]) {
+      this.correctAnswer = true;
+    } else {
+      this.correctAnswer = false;
+    }
+  }
+
+  createSlash(x, y, frame, velocity, flip = false) {
+    this.slash
+      .setPosition(x, y)
+      .setActive(true)
+      .setVisible(true)
+      .setFrame(frame)
+      .setFlipX(flip)
+      .setVelocityX(velocity);
+  }
+
+  spriteHit(slash, sprite) {
+    slash.x = 0;
+    slash.y = 0;
+    slash.setActive(false);
+    slash.setVisible(false);
+
+    if (sprite.texture.key === 'player') {
+      sprite.anims.play('player-hit', true);
+    } else {
+      sprite.anims.play('enemy-hit', true);
+    }
+
+    // Reset back to the initial state
+    this.time.delayedCall(500, () => {
+      this.playerAttack = false;
+      this.enemyAttack = false;
+      this.correctAnswer = undefined;
+      this.timer = 10;
+      this.generateQuestion();
+    });
   }
 }
